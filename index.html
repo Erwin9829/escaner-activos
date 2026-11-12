@@ -84,7 +84,6 @@
     <div class="form-group">
         <button onclick="capturarOCR()" style="background-color: #28a745; margin-bottom: 15px;">📸 Capturar y Leer Serie</button>
         
-        <!-- Formulario manejado por JavaScript para evitar errores 401 -->
         <form id="activoForm" onsubmit="enviarDatos(event)">
             <input type="hidden" id="form_id">
             <input type="text" id="numero_serie" name="serie" placeholder="Número de serie (Editable)" required>
@@ -98,8 +97,8 @@
     <div id="status"></div>
 
     <script>
-        // URL de tu Apps Script corporativo actual
-        const SCRIPT_URL = "https://script.google.com/a/macros/coppel.com/s/AKfycbx2rTVlQhEiFNk9KL5XK1FGQgIHcOCW7ZFBobvk5V8BFM7IU6WXcCuITri20vIIkFwmtQ/exec";
+        // URL limpia estándar sin redirección de dominio corporativo bloqueante
+        const SCRIPT_URL = "https://script.google.com/macros/s/TU_NUEVO_ID_DE_IMPLEMENTACION_LIMPIA/exec";
 
         const video = document.getElementById('preview');
         const canvas = document.getElementById('canvas');
@@ -154,7 +153,6 @@
             const ubicacion = document.getElementById('ubicacion').value;
             const propietario = document.getElementById('propietario').value;
 
-            // Usamos URLSearchParams para enviar por POST de forma compatible con Apps Script
             const formData = new URLSearchParams();
             formData.append('id', id);
             formData.append('serie', serie);
@@ -163,14 +161,13 @@
 
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Evita bloqueos de seguridad del navegador con Apps Script
+                mode: 'no-cors',
                 body: formData
             })
             .then(() => {
                 statusDiv.innerText = "✅ ¡Guardado exitosamente!";
                 statusDiv.style.color = "green";
                 
-                // Limpiar campos
                 document.getElementById('activoForm').reset();
                 btn.disabled = false;
             })
