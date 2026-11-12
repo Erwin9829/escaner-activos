@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Escáner OCR Series - Coppel</title>
-    <!-- Importamos Tesseract.js para lectura OCR de texto en tiempo real -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <style>
         body { 
@@ -25,14 +24,8 @@
             overflow: hidden;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        video {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        canvas {
-            display: none;
-        }
+        video { width: 100%; height: auto; display: block; }
+        canvas { display: none; }
         .form-group { 
             margin-top: 15px; 
             max-width: 500px;
@@ -79,22 +72,21 @@
 </head>
 <body>
 
-    <h2>Lector OCR de Series (Rezagados)</h2>
+    <h2>Lector OCR de Series (Activos)</h2>
     
-    <!-- Contenedor de la cámara de video nativa -->
     <div id="video-container">
         <video id="preview" autoplay playsinline></video>
     </div>
     <canvas id="canvas"></canvas>
     
-    <div class="hint">📷 Enfoca el texto "SN..." y presiona "Capturar y Leer Texto"</div>
+    <div class="hint">📷 Enfoca el número de serie y presiona "Capturar y Leer Serie"</div>
 
     <div class="form-group">
         <button onclick="capturarOCR()" style="background-color: #28a745; margin-bottom: 15px;">📸 Capturar y Leer Serie</button>
         
-        <input type="text" id="numero_serie" placeholder="Número de serie detectado o manual">
-        <input type="text" id="ubicacion" placeholder="Ubicación (Ej. Bodega, Taller...)">
-        <input type="text" id="propietario" placeholder="Propietario / Área (Opcional)">
+        <input type="text" id="numero_serie" placeholder="Número de serie (Editable)">
+        <input type="text" id="ubicacion" placeholder="Ubicación">
+        <input type="text" id="propietario" placeholder="Propietario / Área">
         
         <button onclick="enviarAppSheet()">Guardar en Activos</button>
     </div>
@@ -102,7 +94,6 @@
     <div id="status"></div>
 
     <script>
-        // --- 1. CREDENCIALES ---
         const appId = "88024224-b518-49ab-8639-82e0dbbd2fba"; 
         const accessKey = "V2-XFEZC-97hfa-ckNsy-gYZni-9Gn8H-wEgou-amyJQ-AbXua"; 
         const tableName = "Activos"; 
@@ -111,26 +102,18 @@
         const canvas = document.getElementById('canvas');
         const statusDiv = document.getElementById('status');
 
-        // Iniciar la cámara trasera del celular automáticamente
         navigator.mediaDevices.getUserMedia({ 
             video: { facingMode: { exact: "environment" } } 
         })
-        .catch(() => {
-            // Si la cámara trasera estricta falla, abre cualquiera disponible
-            return navigator.mediaDevices.getUserMedia({ video: true });
-        })
-        .then(stream => {
-            video.srcObject = stream;
-        })
+        .catch(() => navigator.mediaDevices.getUserMedia({ video: true }))
+        .then(stream => { video.srcObject = stream; })
         .catch(err => {
-            console.error("Error al acceder a la cámara: ", err);
             statusDiv.innerText = "⚠️ No se pudo acceder a la cámara.";
             statusDiv.style.color = "red";
         });
 
-        // --- 2. FUNCIÓN DE CAPTURA Y OCR ---
         function capturarOCR() {
-            statusDiv.innerText = "🔍 Leyendo texto de la imagen (OCR)...";
+            statusDiv.innerText = "🔍 Leyendo texto con OCR...";
             statusDiv.style.color = "blue";
 
             canvas.width = video.videoWidth;
@@ -138,37 +121,30 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Convertimos la captura en imagen para que Tesseract la procese
             const imageDataUrl = canvas.toDataURL('image/png');
 
             Tesseract.recognize(
                 imageDataUrl,
-                'eng', // Inglés/Español para números y letras de series
+                'eng',
                 { logger: m => console.log(m) }
             ).then(({ data: { text } }) => {
-                console.log("Texto detectado:", text);
-                
-                // Limpiamos el texto buscando patrones tipo SN o alfanuméricos largos
                 let limpio = text.replace(/[\n\r]+/g, ' ').trim();
-                
                 document.getElementById('numero_serie').value = limpio;
-                statusDiv.innerText = "✅ Texto extraído con éxito. Revisa o guarda.";
+                statusDiv.innerText = "✅ Texto extraído con éxito.";
                 statusDiv.style.color = "green";
             }).catch(err => {
-                console.error(err);
-                statusDiv.innerText = "❌ Error en el reconocimiento OCR.";
+                statusDiv.innerText = "❌ Error en OCR.";
                 statusDiv.style.color = "red";
             });
         }
 
-        // --- 3. ENVÍO A APPSHEET ---
         function enviarAppSheet() {
             const serie = document.getElementById('numero_serie').value.trim();
-            const ubicacion = document.getElementById('ubicacion').value || "Sin asignar";
-            const propietario = document.getElementById('propietario').value || "";
+            const ubicacion = document.getElementById('ubicacion').value.trim();
+            const propietario = document.getElementById('propietario').value.trim();
 
             if(!serie) {
-                statusDiv.innerText = "⚠️ Primero captura o escribe el número de serie.";
+                statusDiv.innerText = "⚠️ Escribe o captura el número de serie.";
                 statusDiv.style.color = "red";
                 return;
             }
@@ -176,6 +152,7 @@
             statusDiv.innerText = "⏳ Guardando en AppSheet...";
             statusDiv.style.color = "blue";
 
+            // Mandamos únicamente las columnas básicas para evitar bloqueos
             const payload = {
                 "Action": "Add",
                 "Properties": {
@@ -185,7 +162,6 @@
                 "Rows": [
                     {
                         "Numero Serie": serie,
-                        "Estatus": "Rezagado",
                         "Ubicacion": ubicacion,
                         "Propietario": propietario
                     }
@@ -214,8 +190,8 @@
                 document.getElementById('numero_serie').value = ""; 
             })
             .catch(error => {
-                console.error('Error detallado:', error);
-                statusDiv.innerText = "❌ Error al enviar a AppSheet.";
+                console.error('Error:', error);
+                statusDiv.innerText = "❌ Error al enviar. Revisa la consola.";
                 statusDiv.style.color = "red";
             });
         }
