@@ -152,7 +152,10 @@
             statusDiv.innerText = "⏳ Guardando en AppSheet...";
             statusDiv.style.color = "blue";
 
-            // Mandamos únicamente las columnas básicas para evitar bloqueos
+            // Generamos un ID único basado en milisegundos y un número al azar
+            const uniqueId = 'ACT-' + Date.now();
+
+            // Incluimos Id y Estatus mapeados exactamente con tus columnas
             const payload = {
                 "Action": "Add",
                 "Properties": {
@@ -161,7 +164,9 @@
                 },
                 "Rows": [
                     {
+                        "Id": uniqueId,
                         "Numero Serie": serie,
+                        "Estatus": "Rezagado",
                         "Ubicacion": ubicacion,
                         "Propietario": propietario
                     }
@@ -190,7 +195,7 @@
                 document.getElementById('numero_serie').value = ""; 
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Error detallado:', error);
                 statusDiv.innerText = "❌ Error al enviar. Revisa la consola.";
                 statusDiv.style.color = "red";
             });
