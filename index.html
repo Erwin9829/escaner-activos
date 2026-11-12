@@ -84,19 +84,23 @@
     <div class="form-group">
         <button onclick="capturarOCR()" style="background-color: #28a745; margin-bottom: 15px;">📸 Capturar y Leer Serie</button>
         
-        <input type="text" id="numero_serie" placeholder="Número de serie (Editable)">
-        <input type="text" id="ubicacion" placeholder="Ubicación">
-        <input type="text" id="propietario" placeholder="Propietario / Área">
+        <!-- FORMULARIO OCULTO / DIRECTO PARA EVITAR ERRORES DE CORS -->
+        <form id="activoForm" action="https://script.google.com/macros/s/AKfycbyusEqWB-u8xCsFpt6yQONr4jGBkFX12PrKTsqm2bR4RQ1JP5zflP5pwFSHmlxMd_vp/exec" method="POST" target="hidden_iframe" onsubmit="mostrarExito()">
+            <input type="hidden" name="id" id="form_id">
+            <input type="text" id="numero_serie" name="serie" placeholder="Número de serie (Editable)" required>
+            <input type="text" id="ubicacion" name="ubicacion" placeholder="Ubicación">
+            <input type="text" id="propietario" name="propietario" placeholder="Propietario / Área">
+            
+            <button type="submit">Guardar en Activos</button>
+        </form>
         
-        <button onclick="enviarAppSheet()">Guardar en Activos</button>
+        <!-- Iframe invisible para recibir la respuesta sin recargar la página -->
+        <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
     </div>
     
     <div id="status"></div>
 
     <script>
-        // URL limpia de Google Apps Script (Cuenta personal sin restricciones 401)
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbyusEqWB-u8xCsFpt6yQONr4jGBkFX12PrKTsqm2bR4RQ1JP5zflP5pwFSHmlxMd_vp/exec";
-
         const video = document.getElementById('preview');
         const canvas = document.getElementById('canvas');
         const statusDiv = document.getElementById('status');
@@ -137,45 +141,16 @@
             });
         }
 
-        function enviarAppSheet() {
-            const serie = document.getElementById('numero_serie').value.trim();
-            const ubicacion = document.getElementById('ubicacion').value.trim();
-            const propietario = document.getElementById('propietario').value.trim();
-
-            if(!serie) {
-                statusDiv.innerText = "⚠️ Escribe o captura el número de serie.";
-                statusDiv.style.color = "red";
-                return;
-            }
-
-            statusDiv.innerText = "⏳ Guardando en la hoja...";
-            statusDiv.style.color = "blue";
-
-            const payload = {
-                "id": 'ACT-' + Date.now(),
-                "serie": serie,
-                "ubicacion": ubicacion,
-                "propietario": propietario
-            };
-
-            fetch(scriptUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            })
-            .then(() => {
-                statusDiv.innerText = "✅ ¡Guardado con éxito en la hoja!";
-                statusDiv.style.color = "green";
-                document.getElementById('numero_serie').value = ""; 
-            })
-            .catch(error => {
-                console.error('Error detallado:', error);
-                statusDiv.innerText = "❌ Error al enviar.";
-                statusDiv.style.color = "red";
-            });
+        function mostrarExito() {
+            // Generamos el ID único antes de enviar
+            document.getElementById('form_id').value = 'ACT-' + Date.now();
+            statusDiv.innerText = "✅ ¡Guardado con éxito en la hoja!";
+            statusDiv.style.color = "green";
+            
+            // Limpiamos el campo de serie después de un segundo
+            setTimeout(() => {
+                document.getElementById('numero_serie').value = "";
+            }, 1000);
         }
     </script>
 </body>
