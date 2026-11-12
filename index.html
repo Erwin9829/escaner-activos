@@ -84,22 +84,22 @@
     <div class="form-group">
         <button onclick="capturarOCR()" style="background-color: #28a745; margin-bottom: 15px;">📸 Capturar y Leer Serie</button>
         
-        <form id="activoForm" onsubmit="enviarDatos(event)">
-            <input type="hidden" id="form_id">
+        <!-- Formulario clásico con iframe oculto: Cero bloqueos de CORS y Cero errores 401 -->
+        <form id="activoForm" action="https://script.google.com/a/macros/coppel.com/s/AKfycbxQmLGvdP9BV8GvjbTIgLjIVPU3g6krbj77mNLYWvEi93KldBUJIGA7QgDOu6eA_fkI1Q/exec" method="POST" target="hidden_iframe" onsubmit="prepararEnvio()">
+            <input type="hidden" name="id" id="form_id">
             <input type="text" id="numero_serie" name="serie" placeholder="Número de serie (Editable)" required>
             <input type="text" id="ubicacion" name="ubicacion" placeholder="Ubicación">
             <input type="text" id="propietario" name="propietario" placeholder="Propietario / Área">
             
             <button type="submit" id="btnGuardar">Guardar en Activos</button>
         </form>
+        
+        <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
     </div>
     
     <div id="status"></div>
 
     <script>
-        // URL corporativa integrada correctamente
-        const SCRIPT_URL = "https://script.google.com/a/macros/coppel.com/s/AKfycbxQmLGvdP9BV8GvjbTIgLjIVPU3g6krbj77mNLYWvEi93KldBUJIGA7QgDOu6eA_fkI1Q/exec";
-
         const video = document.getElementById('preview');
         const canvas = document.getElementById('canvas');
         const statusDiv = document.getElementById('status');
@@ -140,42 +140,17 @@
             });
         }
 
-        function enviarDatos(event) {
-            event.preventDefault();
+        function prepararEnvio() {
+            // Generar ID único basado en tiempo
+            document.getElementById('form_id').value = 'ACT-' + Date.now();
             
-            const btn = document.getElementById('btnGuardar');
-            btn.disabled = true;
-            statusDiv.innerText = "⏳ Guardando en la hoja...";
-            statusDiv.style.color = "orange";
-
-            const id = 'ACT-' + Date.now();
-            const serie = document.getElementById('numero_serie').value;
-            const ubicacion = document.getElementById('ubicacion').value;
-            const propietario = document.getElementById('propietario').value;
-
-            const formData = new URLSearchParams();
-            formData.append('id', id);
-            formData.append('serie', serie);
-            formData.append('ubicacion', ubicacion);
-            formData.append('propietario', propietario);
-
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: formData
-            })
-            .then(() => {
-                statusDiv.innerText = "✅ ¡Guardado exitosamente!";
-                statusDiv.style.color = "green";
-                
+            statusDiv.innerText = "✅ ¡Enviado a la hoja de cálculo!";
+            statusDiv.style.color = "green";
+            
+            // Limpiar formulario después de un segundo
+            setTimeout(() => {
                 document.getElementById('activoForm').reset();
-                btn.disabled = false;
-            })
-            .catch(error => {
-                statusDiv.innerText = "❌ Error al conectar con el servidor.";
-                statusDiv.style.color = "red";
-                btn.disabled = false;
-            });
+            }, 1000);
         }
     </script>
 </body>
