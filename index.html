@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escáner Activos - Coppel</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 15px;
+            background-color: #f0f2f5;
+            margin: 0;
+        }
+
+        h2 {
+            color: #0056b3;
+            margin-bottom: 15px;
+        }
+
+        #reader {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-top: 15px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        input[type="text"] {
+            width: 90%;
+            padding: 12px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            text-align: center;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        #numero_serie {
+            font-weight: bold;
+            font-size: 18px;
+            background-color: #e9ecef;
+            color: #333;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 90%;
+            margin-top: 5px;
+        }
+
+        button:active {
+            background-color: #004494;
+        }
+
+        #status {
+            margin-top: 15px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Registro de Equipos Rezagados</h2>
+
+    <!-- Cámara -->
+    <div id="reader"></div>
+
+    <div class="form-group">
+        <!-- Campo llenado por la cámara -->
+        <input type="text" id="numero_serie" placeholder="Escanea el código de barras..." readonly>
+
+        <!-- Campos opcionales para llenar tus columnas de Ubicacion y Propietario -->
+        <input type="text" id="ubicacion" placeholder="Ubicación (Ej. Bodega, Piso 2...)">
+        <input type="text" id="propietario" placeholder="Propietario / Área (Opcional)">
+
+        <button onclick="enviarAppSheet()">Guardar en Activos</button>
+    </div>
+
+    <div id="status"></div>
+
+    <script>
+        // --- 1. TUS CREDENCIALES DE APPSHEET ---
+        const appId = "88024224-b518-49ab-8639-82e0dbbd2fba";
+        const accessKey = "V2-XfEZC-97hfa-ckNsy-gYZNi-9Gn8H-wEgou-amyJQ-AbXua";
+        const tableName = "Activos"; // Ya configurado con el nombre exacto de tu tabla
+
+        // --- 2. CONFIGURACIÓN DE LA CÁMARA ---
+        function onScanSuccess(decodedText, decodedResult) {
+            document.getElementById('numero_serie').value = decodedText;
+            document.getElementById('status').innerText = "✅ Serie capturada. Lista para guardar.";
+            document.getElementById('status').style.color = "green";
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader",
+            {
+                fps: 15,
+                qrbox: { width: 350, height: 150 }, // Hacemos el recuadro más grande y rectangular
+                aspectRatio: 1.0
+            },
+            false
+        );
+        html5QrcodeScanner.render(onScanSuccess);
+
+        // --- 3. ENVÍO A TU TABLA "ACTIVOS" ---
+        function enviarAppSheet() {
+            const serie = document.getElementById('numero_serie').value;
+            const ubicacion = document.getElementById('ubicacion').value || "Sin asignar";
+            const propietario = document.getElementById('propietario').value || "";
+            const statusDiv = document.getElementById('status');
+
+            if (!serie) {
+                statusDiv.innerText = "⚠️ Primero escanea el código del equipo.";
+                statusDiv.style.color = "red";
+                return;
+            }
+
+            statusDiv.innerText = "⏳ Guardando en AppSheet...";
+            statusDiv.style.color = "blue";
+
+            // Mapeo exacto con las columnas de tu imagen
+            const payload = {
+                "Action": "Add",
+                "Properties": {
+                    "Locale": "es-MX",
+                    "Timezone": "America/Mexico_City"
+                },
+                "Rows": [
+                    {
+                        "Numero Serie": serie,
+                        "Estatus": "Rezagado", // Verifica que "Rezagado" exista en tu lista Enum de AppSheet
+                        "Ubicacion": ubicacion,
+                        "Propietario": propietario
+                    }
+                ]
+            };
+
+            const apiUrl = `https://api.appsheet.com/api/v2/apps/${appId}/tables/${tableName}/Action`;
+
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'applicationAccessKey': accessKey
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(text) });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    statusDiv.innerText = "✅ ¡Equipo guardado en Activos!";
+                    statusDiv.style.color = "green";
+                    // Limpia solo el número de serie para que puedas escanear varios equipos seguidos en la misma ubicación
+                    document.getElementById('numero_serie').value = "";
+                })
+                .catch(error => {
+                    console.error('Error detallado:', error);
+                    statusDiv.innerText = "❌ Error al guardar. Revisa el Estatus o las llaves.";
+                    statusDiv.style.color = "red";
+                });
+        }
+    </script>
+</body>
+
+</html>
