@@ -94,9 +94,8 @@
     <div id="status"></div>
 
     <script>
-        const appId = "88024224-b518-49ab-8639-82e0dbbd2fba"; 
-        const accessKey = "V2-k8din-civWe-9Hn2a-Gveil-RB4D0-3GA7t-y7LGW-anSny";
-        const tableName = "Activos"; 
+        // URL de tu Apps Script implementada
+        const scriptUrl = "https://script.google.com/a/macros/coppel.com/s/AKfycbzoapqFH3o4EVgymmZ2t4xT0JCPaXiG4l4PaRZVwDVe_ffU3egr0M-NNyiBkhRbY-ET/exec";
 
         const video = document.getElementById('preview');
         const canvas = document.getElementById('canvas');
@@ -149,54 +148,32 @@
                 return;
             }
 
-            statusDiv.innerText = "⏳ Guardando en AppSheet...";
+            statusDiv.innerText = "⏳ Guardando en la hoja...";
             statusDiv.style.color = "blue";
 
-            // Generamos un ID único basado en milisegundos y un número al azar
-            const uniqueId = 'ACT-' + Date.now();
-
-            // Incluimos Id y Estatus mapeados exactamente con tus columnas
             const payload = {
-                "Action": "Add",
-                "Properties": {
-                    "Locale": "es-MX",
-                    "Timezone": "America/Mexico_City"
-                },
-                "Rows": [
-                    {
-                        "Id": uniqueId,
-                        "Numero Serie": serie,
-                        "Estatus": "Rezagado",
-                        "Ubicacion": ubicacion,
-                        "Propietario": propietario
-                    }
-                ]
+                "id": 'ACT-' + Date.now(),
+                "serie": serie,
+                "ubicacion": ubicacion,
+                "propietario": propietario
             };
 
-            const apiUrl = `https://api.appsheet.com/api/v2/apps/${appId}/tables/${tableName}/Action`;
-
-            fetch(apiUrl, {
+            fetch(scriptUrl, {
                 method: 'POST',
+                mode: 'no-cors',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'applicationAccessKey': accessKey
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload)
             })
-            .then(response => {
-                if (!response.ok) {
-                    return response.text().then(text => { throw new Error(text) });
-                }
-                return response.json();
-            })
-            .then(data => {
-                statusDiv.innerText = "✅ ¡Guardado con éxito en Activos!";
+            .then(() => {
+                statusDiv.innerText = "✅ ¡Guardado con éxito en la hoja!";
                 statusDiv.style.color = "green";
                 document.getElementById('numero_serie').value = ""; 
             })
             .catch(error => {
                 console.error('Error detallado:', error);
-                statusDiv.innerText = "❌ Error al enviar. Revisa la consola.";
+                statusDiv.innerText = "❌ Error al enviar.";
                 statusDiv.style.color = "red";
             });
         }
