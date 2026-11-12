@@ -84,8 +84,8 @@
     <div class="form-group">
         <button onclick="capturarOCR()" style="background-color: #28a745; margin-bottom: 15px;">📸 Capturar y Leer Serie</button>
         
-        <!-- FORMULARIO OCULTO / DIRECTO PARA EVITAR ERRORES DE CORS -->
-        <form id="activoForm" action="https://script.google.com/macros/s/AKfycbyusEqWB-u8xCsFpt6yQONr4jGBkFX12PrKTsqm2bR4RQ1JP5zflP5pwFSHmlxMd_vp/exec" method="POST" target="hidden_iframe" onsubmit="mostrarExito()">
+        <!-- Formulario directo por POST tradicional que evita bloqueos CORS/401 -->
+        <form id="activoForm" action="https://script.google.com/macros/s/AKfycbyusEqWB-u8xCsFpt6yQONr4jGBkFX12PrKTsqm2bR4RQ1JP5zflP5pwFSHmlxMd_vp/exec" method="POST" target="hidden_iframe" onsubmit="prepararEnvio()">
             <input type="hidden" name="id" id="form_id">
             <input type="text" id="numero_serie" name="serie" placeholder="Número de serie (Editable)" required>
             <input type="text" id="ubicacion" name="ubicacion" placeholder="Ubicación">
@@ -94,7 +94,6 @@
             <button type="submit">Guardar en Activos</button>
         </form>
         
-        <!-- Iframe invisible para recibir la respuesta sin recargar la página -->
         <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
     </div>
     
@@ -141,15 +140,15 @@
             });
         }
 
-        function mostrarExito() {
-            // Generamos el ID único antes de enviar
+        function prepararEnvio() {
             document.getElementById('form_id').value = 'ACT-' + Date.now();
-            statusDiv.innerText = "✅ ¡Guardado con éxito en la hoja!";
+            statusDiv.innerText = "✅ ¡Enviado a la hoja de cálculo!";
             statusDiv.style.color = "green";
             
-            // Limpiamos el campo de serie después de un segundo
             setTimeout(() => {
                 document.getElementById('numero_serie').value = "";
+                document.getElementById('ubicacion').value = "";
+                document.getElementById('propietario').value = "";
             }, 1000);
         }
     </script>
