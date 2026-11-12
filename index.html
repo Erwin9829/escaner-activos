@@ -1,138 +1,174 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escáner Activos - Coppel</title>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <title>Escáner OCR Series - Coppel</title>
+    <!-- Importamos Tesseract.js para lectura OCR de texto en tiempo real -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 15px;
-            background-color: #f0f2f5;
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 15px; 
+            background-color: #f0f2f5; 
             margin: 0;
         }
-
-        h2 {
-            color: #0056b3;
-            margin-bottom: 15px;
-        }
-
-        #reader {
-            width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
-            background: #fff;
+        h2 { color: #0056b3; margin-bottom: 10px; font-size: 20px; }
+        #video-container { 
+            position: relative;
+            width: 100%; 
+            max-width: 500px; 
+            margin: 0 auto; 
+            background: #000; 
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-
-        .form-group {
-            margin-top: 15px;
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        canvas {
+            display: none;
+        }
+        .form-group { 
+            margin-top: 15px; 
             max-width: 500px;
             margin-left: auto;
             margin-right: auto;
         }
-
-        input[type="text"] {
-            width: 90%;
-            padding: 12px;
-            font-size: 16px;
-            margin-bottom: 10px;
-            text-align: center;
+        input[type="text"] { 
+            width: 90%; 
+            padding: 12px; 
+            font-size: 16px; 
+            margin-bottom: 10px; 
+            text-align: center; 
             border: 2px solid #ccc;
             border-radius: 5px;
             box-sizing: border-box;
         }
-
         #numero_serie {
             font-weight: bold;
             font-size: 18px;
-            background-color: #e9ecef;
-            color: #333;
+            background-color: #fff3cd;
+            color: #856404;
+            border: 2px dashed #ffeeba;
         }
-
-        button {
-            padding: 15px 30px;
-            font-size: 18px;
+        button { 
+            padding: 15px 30px; 
+            font-size: 18px; 
             font-weight: bold;
-            background-color: #0056b3;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+            background-color: #0056b3; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
             width: 90%;
             margin-top: 5px;
         }
-
-        button:active {
-            background-color: #004494;
-        }
-
-        #status {
-            margin-top: 15px;
+        button:active { background-color: #004494; }
+        #status { 
+            margin-top: 15px; 
             font-size: 16px;
-            font-weight: bold;
+            font-weight: bold; 
         }
+        .hint { font-size: 13px; color: #666; margin-bottom: 10px; }
     </style>
 </head>
-
 <body>
 
-    <h2>Registro de Equipos Rezagados</h2>
-
-    <!-- Cámara -->
-    <div id="reader"></div>
+    <h2>Lector OCR de Series (Rezagados)</h2>
+    
+    <!-- Contenedor de la cámara de video nativa -->
+    <div id="video-container">
+        <video id="preview" autoplay playsinline></video>
+    </div>
+    <canvas id="canvas"></canvas>
+    
+    <div class="hint">📷 Enfoca el texto "SN..." y presiona "Capturar y Leer Texto"</div>
 
     <div class="form-group">
-        <!-- Campo llenado por la cámara -->
-        <input type="text" id="numero_serie" placeholder="Escanea el código de barras..." readonly>
-
-        <!-- Campos opcionales para llenar tus columnas de Ubicacion y Propietario -->
-        <input type="text" id="ubicacion" placeholder="Ubicación (Ej. Bodega, Piso 2...)">
+        <button onclick="capturarOCR()" style="background-color: #28a745; margin-bottom: 15px;">📸 Capturar y Leer Serie</button>
+        
+        <input type="text" id="numero_serie" placeholder="Número de serie detectado o manual">
+        <input type="text" id="ubicacion" placeholder="Ubicación (Ej. Bodega, Taller...)">
         <input type="text" id="propietario" placeholder="Propietario / Área (Opcional)">
-
+        
         <button onclick="enviarAppSheet()">Guardar en Activos</button>
     </div>
-
+    
     <div id="status"></div>
 
     <script>
-        // --- 1. TUS CREDENCIALES DE APPSHEET ---
-        const appId = "88024224-b518-49ab-8639-82e0dbbd2fba";
-        const accessKey = "V2-XfEZC-97hfa-ckNsy-gYZNi-9Gn8H-wEgou-amyJQ-AbXua";
-        const tableName = "Activos"; // Ya configurado con el nombre exacto de tu tabla
+        // --- 1. CREDENCIALES ---
+        const appId = "88024224-b518-49ab-8639-82e0dbbd2fba"; 
+        const accessKey = "V2-XFEZC-97hfa-ckNsy-gYZni-9Gn8H-wEgou-amyJQ-AbXua"; 
+        const tableName = "Activos"; 
 
-        // --- 2. CONFIGURACIÓN DE LA CÁMARA ---
-        function onScanSuccess(decodedText, decodedResult) {
-            document.getElementById('numero_serie').value = decodedText;
-            document.getElementById('status').innerText = "✅ Serie capturada. Lista para guardar.";
-            document.getElementById('status').style.color = "green";
+        const video = document.getElementById('preview');
+        const canvas = document.getElementById('canvas');
+        const statusDiv = document.getElementById('status');
+
+        // Iniciar la cámara trasera del celular automáticamente
+        navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: { exact: "environment" } } 
+        })
+        .catch(() => {
+            // Si la cámara trasera estricta falla, abre cualquiera disponible
+            return navigator.mediaDevices.getUserMedia({ video: true });
+        })
+        .then(stream => {
+            video.srcObject = stream;
+        })
+        .catch(err => {
+            console.error("Error al acceder a la cámara: ", err);
+            statusDiv.innerText = "⚠️ No se pudo acceder a la cámara.";
+            statusDiv.style.color = "red";
+        });
+
+        // --- 2. FUNCIÓN DE CAPTURA Y OCR ---
+        function capturarOCR() {
+            statusDiv.innerText = "🔍 Leyendo texto de la imagen (OCR)...";
+            statusDiv.style.color = "blue";
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convertimos la captura en imagen para que Tesseract la procese
+            const imageDataUrl = canvas.toDataURL('image/png');
+
+            Tesseract.recognize(
+                imageDataUrl,
+                'eng', // Inglés/Español para números y letras de series
+                { logger: m => console.log(m) }
+            ).then(({ data: { text } }) => {
+                console.log("Texto detectado:", text);
+                
+                // Limpiamos el texto buscando patrones tipo SN o alfanuméricos largos
+                let limpio = text.replace(/[\n\r]+/g, ' ').trim();
+                
+                document.getElementById('numero_serie').value = limpio;
+                statusDiv.innerText = "✅ Texto extraído con éxito. Revisa o guarda.";
+                statusDiv.style.color = "green";
+            }).catch(err => {
+                console.error(err);
+                statusDiv.innerText = "❌ Error en el reconocimiento OCR.";
+                statusDiv.style.color = "red";
+            });
         }
 
-        let html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader",
-            {
-                fps: 15,
-                qrbox: { width: 350, height: 150 }, // Hacemos el recuadro más grande y rectangular
-                aspectRatio: 1.0
-            },
-            false
-        );
-        html5QrcodeScanner.render(onScanSuccess);
-
-        // --- 3. ENVÍO A TU TABLA "ACTIVOS" ---
+        // --- 3. ENVÍO A APPSHEET ---
         function enviarAppSheet() {
-            const serie = document.getElementById('numero_serie').value;
+            const serie = document.getElementById('numero_serie').value.trim();
             const ubicacion = document.getElementById('ubicacion').value || "Sin asignar";
             const propietario = document.getElementById('propietario').value || "";
-            const statusDiv = document.getElementById('status');
 
-            if (!serie) {
-                statusDiv.innerText = "⚠️ Primero escanea el código del equipo.";
+            if(!serie) {
+                statusDiv.innerText = "⚠️ Primero captura o escribe el número de serie.";
                 statusDiv.style.color = "red";
                 return;
             }
@@ -140,7 +176,6 @@
             statusDiv.innerText = "⏳ Guardando en AppSheet...";
             statusDiv.style.color = "blue";
 
-            // Mapeo exacto con las columnas de tu imagen
             const payload = {
                 "Action": "Add",
                 "Properties": {
@@ -150,7 +185,7 @@
                 "Rows": [
                     {
                         "Numero Serie": serie,
-                        "Estatus": "Rezagado", // Verifica que "Rezagado" exista en tu lista Enum de AppSheet
+                        "Estatus": "Rezagado",
                         "Ubicacion": ubicacion,
                         "Propietario": propietario
                     }
@@ -167,25 +202,23 @@
                 },
                 body: JSON.stringify(payload)
             })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.text().then(text => { throw new Error(text) });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    statusDiv.innerText = "✅ ¡Equipo guardado en Activos!";
-                    statusDiv.style.color = "green";
-                    // Limpia solo el número de serie para que puedas escanear varios equipos seguidos en la misma ubicación
-                    document.getElementById('numero_serie').value = "";
-                })
-                .catch(error => {
-                    console.error('Error detallado:', error);
-                    statusDiv.innerText = "❌ Error al guardar. Revisa el Estatus o las llaves.";
-                    statusDiv.style.color = "red";
-                });
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+                return response.json();
+            })
+            .then(data => {
+                statusDiv.innerText = "✅ ¡Guardado con éxito en Activos!";
+                statusDiv.style.color = "green";
+                document.getElementById('numero_serie').value = ""; 
+            })
+            .catch(error => {
+                console.error('Error detallado:', error);
+                statusDiv.innerText = "❌ Error al enviar a AppSheet.";
+                statusDiv.style.color = "red";
+            });
         }
     </script>
 </body>
-
 </html>
