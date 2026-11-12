@@ -84,8 +84,8 @@
     <div class="form-group">
         <button onclick="capturarOCR()" style="background-color: #28a745; margin-bottom: 15px;">📸 Capturar y Leer Serie</button>
         
-        <!-- Formulario clásico con iframe oculto: Cero bloqueos de CORS y Cero errores 401 -->
-        <form id="activoForm" action="https://script.google.com/a/macros/coppel.com/s/AKfycbxQmLGvdP9BV8GvjbTIgLjIVPU3g6krbj77mNLYWvEi93KldBUJIGA7QgDOu6eA_fkI1Q/exec" method="POST" target="hidden_iframe" onsubmit="prepararEnvio()">
+        <!-- Formulario apuntando a la Versión 5 mediante iframe oculto -->
+        <form id="activoForm" action="https://script.google.com/a/macros/coppel.com/s/AKfycbzhAlgXNyIPUFeI4T6SJN7uU40D8oC4zcb6TuV7PpMF78Mo_rYRV3YaGHa2IQicvy9N/exec" method="POST" target="hidden_iframe" onsubmit="prepararEnvio()">
             <input type="hidden" name="id" id="form_id">
             <input type="text" id="numero_serie" name="serie" placeholder="Número de serie (Editable)" required>
             <input type="text" id="ubicacion" name="ubicacion" placeholder="Ubicación">
@@ -141,13 +141,13 @@
         }
 
         function prepararEnvio() {
-            // Generar ID único basado en tiempo
+            // Generar ID único para el registro
             document.getElementById('form_id').value = 'ACT-' + Date.now();
             
-            statusDiv.innerText = "✅ ¡Enviado a la hoja de cálculo!";
+            statusDiv.innerText = "✅ ¡Guardado exitosamente!";
             statusDiv.style.color = "green";
             
-            // Limpiar formulario después de un segundo
+            // Limpiar formulario al momento de enviar
             setTimeout(() => {
                 document.getElementById('activoForm').reset();
             }, 1000);
